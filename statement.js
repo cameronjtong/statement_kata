@@ -1,46 +1,83 @@
 export function statement(invoice, plays) {
-  let totalAmount = 0;
-  let volumeCredits = 0;
-  let result = `Statement for ${invoice.customer}\n`;
-  const { format } = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2
-  });
-  for (const perf of invoice.performances) {
-    const play = plays[perf.playID];
-    let thisAmount = 0;
-    switch (play.type) {
+  return renderPlainText(createStatementData(invoice, plays));
+}
+function createStatementData(invoice, plays) {
+  const statementData = {};
+  statementData.customer = invoice.customer;
+  statementData.performances = invoice.performances.map(enrichPerformance);
+  statementData.totalAmount = totalAmount(statementData);
+  statementData.totalVolumeCredits = totalVolumeCredits(statementData);
+  return statementData;
+
+  function enrichPerformance(aPerformance) {
+    const result = { ...aPerformance };
+    result.play = playFor(result);
+    result.amount = amountFor(result);
+    result.volumeCredits = volumeCreditsFor(result);
+    return result;
+  }
+  function totalVolumeCredits(data) {
+    return data.performances.reduce(
+      (acc, performance) => acc + performance.volumeCredits,
+      0
+    );
+  }
+  function totalAmount(data) {
+    return data.performances.reduce(
+      (acc, performance) => acc + performance.amount,
+      0
+    );
+  }
+  function playFor(perf) {
+    return plays[perf.playID];
+  }
+  function amountFor(aPerformance) {
+    let result = 0;
+    switch (aPerformance.play.type) {
       case "tragedy":
-        thisAmount = 40000;
-        if (perf.audience > 30) {
-          thisAmount += 1000 * (perf.audience - 30);
+        result = 40000;
+        if (aPerformance.audience > 30) {
+          result += 1000 * (aPerformance.audience - 30);
         }
         break;
       case "comedy":
-        thisAmount = 30000;
-        if (perf.audience > 20) {
-          thisAmount += 10000 + 500 * (perf.audience - 20);
+        result = 30000;
+        if (aPerformance.audience > 20) {
+          result += 10000 + 500 * (aPerformance.audience - 20);
         }
-        thisAmount += 300 * perf.audience;
+        result += 300 * aPerformance.audience;
         break;
       default:
-        throw new Error(`unknown type: ${play.type}`);
+        throw new Error(`unknown type: ${aPerformance.play.type}`);
     }
-
-    // add volume credits
-    volumeCredits += Math.max(perf.audience - 30, 0);
-
-    // add extra credit for every ten comedy attendees
-    if (play.type === "comedy") volumeCredits += Math.floor(perf.audience / 5);
-
-    // print line for this order
-    result += ` ${play.name}: ${format(thisAmount / 100)} (${
-      perf.audience
-    } seats)\n`;
-    totalAmount += thisAmount;
+    return result;
   }
-  result += `Amount owed is ${format(totalAmount / 100)}\n`;
-  result += `You earned ${volumeCredits} credits\n`;
+  function volumeCreditsFor(aPerformance) {
+    let result = 0;
+    result += Math.max(aPerformance.audience - 30, 0);
+
+    if (aPerformance.play.type === "comedy")
+      result += Math.floor(aPerformance.audience / 5);
+    return result;
+  }
+}
+function renderPlainText(data) {
+  let result = `Statement for ${data.customer}\n`;
+
+  for (const aPerformance of data.performances) {
+    result += ` ${aPerformance.play.name}: ${usd(aPerformance.amount)} (${
+      aPerformance.audience
+    } seats)\n`;
+  }
+  result += `Amount owed is ${usd(data.totalAmount)}\n`;
+  result += `You earned ${data.totalVolumeCredits} credits\n`;
   return result;
+
+  function usd(amount) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+    }).format(amount / 100);
+  }
 }

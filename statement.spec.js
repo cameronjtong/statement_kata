@@ -5,7 +5,7 @@ describe("statement", () => {
     const plays = {
       hamlet: { name: "Hamlet", type: "tragedy" },
       "as-like": { name: "As You Like It", type: "comedy" },
-      othello: { name: "Othello", type: "tragedy" }
+      othello: { name: "Othello", type: "tragedy" },
     };
 
     const invoices = [
@@ -14,18 +14,18 @@ describe("statement", () => {
         performances: [
           {
             playID: "hamlet",
-            audience: 55
+            audience: 55,
           },
           {
             playID: "as-like",
-            audience: 35
+            audience: 35,
           },
           {
             playID: "othello",
-            audience: 40
-          }
-        ]
-      }
+            audience: 40,
+          },
+        ],
+      },
     ];
     const expectedOutput =
       "Statement for BigCo\n" +
